@@ -4,7 +4,17 @@ import { execSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 const has = (run, cmd) => { try { run(cmd); return true; } catch { return false; } };
-const connected = (list, name) => list.split('\n').some(l => l.toLowerCase().includes(name) && /connected/i.test(l) && !/failed/i.test(l));
+// Anchored per provider so a tool named my-default-tools or falcon-x is not a match.
+const PROVIDER_RE = {
+  fal: /\bfal(-ai)?\b|mcp\.fal\.ai/i,
+  runway: /\brunway\b|runwayml/i,
+  replicate: /\breplicate\b/i,
+  blender: /\bblender\b/i,
+};
+const connected = (list, name) => {
+  const re = PROVIDER_RE[name];
+  return list.split('\n').some(l => re.test(l) && /connected/i.test(l) && !/failed/i.test(l));
+};
 
 export function diagnose(run) {
   const node = process.versions.node;

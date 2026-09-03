@@ -29,3 +29,15 @@ test('diagnose flags missing ffmpeg', () => {
   assert.equal(r.ffmpeg, false);
   assert.equal(r.ok, false);
 });
+
+test('diagnose does not match a provider name inside another tool name', () => {
+  const r = diagnose(fake({
+    'ffmpeg -version': 'v', 'ffprobe -version': 'v', 'cwebp -version': 'v', 'node -e': 'ok',
+    'higgsfield account status': new Error('no'),
+    'claude mcp list': 'my-default-tools: http://x (HTTP) - \u2714 Connected\nfalcon-x: http://y - \u2714 Connected',
+  }));
+  assert.equal(r.providers.fal, false);
+  assert.equal(r.providers.runway, false);
+  assert.equal(r.providers.replicate, false);
+  assert.equal(r.providers.blender, false);
+});
