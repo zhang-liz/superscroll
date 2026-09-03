@@ -70,6 +70,6 @@ mkdirSync(site, { recursive: true });
 writeFileSync(join(site, 'index.html'), render(readFileSync(join(skill, 'templates', 'index.html'), 'utf8'), htmlVars));
 writeFileSync(join(site, 'styles.css'), render(readFileSync(join(skill, 'templates', 'styles.css'), 'utf8'), vars));
 for (const f of ['scrub.js', 'scrub-core.js', 'scrub.css']) copyFileSync(join(skill, 'engine', f), join(site, f));
-writeFileSync(join(site, 'BRIEF.json'), JSON.stringify({ ...brief, look: look.id, signature: brief.signature || look.signature }, null, 2));
+writeFileSync(join(site, 'brief.json'), JSON.stringify({ ...brief, look: look.id, signature: brief.signature || look.signature }, null, 2));
 for (const t of todos) console.log('todo: ' + t);
 console.log(`built ${site} with look ${look.id}`);

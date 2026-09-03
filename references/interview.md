@@ -1,6 +1,8 @@
 # Interview (only with --custom)
 
-Ask one question per message, in this order. Accept free text. Write answers verbatim to `site/BRIEF.md`.
+Ask one question per message, in this order. Accept free text.
+
+Answers go into `site/brief.json`: the machine file. Map them onto `name`, `tagline`, `items`, `cta`, `contact`, and keep the raw text under an `interview` object so nothing is lost. `site/BRIEF.md` is only a readable transcript for the user; nothing reads it.
 1. Name and one-line role, or the product, company, or place name and what it is.
 2. Three to five things to show: title plus one sentence plus a link each.
 3. Who visits, and the one thing you want them to do.
