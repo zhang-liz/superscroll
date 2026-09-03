@@ -17,6 +17,13 @@ test('engine follows the smoothness rules', () => {
   assert.match(js, /window\.__ss/);
 });
 
+test('engine bounds memory and guards bad input', () => {
+  assert.match(js, /Number\.isInteger\(count\)/);
+  assert.match(js, /revokeObjectURL/);
+  assert.match(js, /lgW|dataset\[set \+ 'W'\]/);
+  assert.match(js, /\b48\b/);
+});
+
 test('engine css has no banned patterns', () => {
   assert.doesNotMatch(css, /transition:\s*all/);
   assert.doesNotMatch(css, /ease-in[^-]/);

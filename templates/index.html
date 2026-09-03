@@ -13,13 +13,13 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="look-{{LOOK}} mode-{{MODE}}">
-<a class="skip" href="#work">Skip to content</a>
+<a class="skip" href="#context">Skip to content</a>
 <header class="top">
   <a class="brand" href="#">{{NAME}}</a>
   <nav aria-label="Primary"><a href="#work">{{NAV_1}}</a><a href="#about">{{NAV_2}}</a><a href="#contact">{{NAV_3}}</a></nav>
 </header>
 
-<section class="ss-hero" data-frames="{{FRAMES}}" data-lg="frames/lg" data-sm="frames/sm" data-pin="{{PIN}}" aria-label="{{NAME}} intro">
+<section class="ss-hero" data-frames="{{FRAMES}}" data-lg="frames/lg" data-sm="frames/sm" data-lg-w="{{LG_W}}" data-sm-w="{{SM_W}}" data-pin="{{PIN}}" aria-label="{{NAME}} intro">
   <div class="ss-stage">
     <img class="ss-poster" src="frames/poster.webp" width="{{POSTER_W}}" height="{{POSTER_H}}" alt="{{POSTER_ALT}}" fetchpriority="high" decoding="async">
     <canvas class="ss-canvas" aria-hidden="true"></canvas>

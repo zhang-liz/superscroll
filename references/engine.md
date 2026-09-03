@@ -3,17 +3,21 @@
 `engine/scrub-core.js`, `engine/scrub.js`, `engine/scrub.css` are copied into the site by `scripts/fill.mjs`. Never edit them in the site. `audit.mjs` compares hashes.
 
 ## DOM contract
-`<section class="ss-hero" data-frames="N" data-lg="frames/lg" data-sm="frames/sm" data-pin="400vh">` wraps `<div class="ss-stage">` with `img.ss-poster`, `canvas.ss-canvas`, and up to 3 `[data-cue]` elements. Anything with `.ss-reveal` fades in once when 10 percent into view.
+`<section class="ss-hero" data-frames="N" data-lg="frames/lg" data-sm="frames/sm" data-lg-w="1600" data-sm-w="850" data-pin="400vh">` wraps `<div class="ss-stage">` with `img.ss-poster`, `canvas.ss-canvas`, and up to 3 `[data-cue]` elements. Anything with `.ss-reveal` fades in once when 10 percent into view.
 
 ## What it does
 - Picks `sm` frames under 768px or when Save-Data is on.
-- Loads every 8th frame plus first and last, then the rest in idle chunks of 6. Decodes with `createImageBitmap` at draw size.
+- Fetches every 8th frame plus first and last, then the rest in idle chunks of 6, and keeps them as **blobs** (cheap: the encoded bytes you already paid for).
+- Decodes lazily into a **bitmap window of at most 48 frames** around the current index: `[target-8, target+16]`, nearest first, never awaited in the ticker. When the window overflows, the entry farthest from the current index is evicted and closed. A fast throw draws the nearest decoded frame until the window catches up.
+- **Never upscales.** Decode width is `min(sourceW, ceil(cssWidth * min(dpr, 2)))`, where `sourceW` comes from `data-lg-w` / `data-sm-w` on the hero, or is learned from the first decoded frame when those attributes are missing.
+- On resize the bitmap window is cleared and re-decoded, because the decode width changed.
 - One rAF: Lenis `autoRaf:false` driven from `gsap.ticker`, `lagSmoothing(0)`.
 - ScrollTrigger pins the stage across the hero height, `scrub: 0.4`, snaps to frames. Frame index lerps at 0.2 until within 1 frame.
 - Draws only when the integer frame changes. DPR capped at 2. Cover-fit.
 - Pauses when the hero is off screen or the tab is hidden.
 - Reduced motion: no pin, no canvas, poster and text shown.
-- Exposes `window.__ss = {ready, drawn, lenis, reduced}` for `shoot.mjs`.
+- Exposes `window.__ss = {ready, drawn, lenis, reduced}` for `shoot.mjs`. `ready` flips true once the first-pass blobs are in and the current window is decoded.
+- Bad input is not fatal: a non-integer or under-2 `data-frames`, a missing stage or canvas, or a missing gsap / ScrollTrigger / Lenis all fall back to the reduced still-frame path with a `console.warn`.
 
 ## brief.json shape
 ```json
