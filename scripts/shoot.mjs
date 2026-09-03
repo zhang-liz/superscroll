@@ -2,9 +2,27 @@
 // Playwright verification. Usage: node scripts/shoot.mjs sitedir
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, mkdirSync, writeFileSync, statSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, resolve, sep } from 'node:path';
 import { execSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
+// Resolve a request path inside the site root. Returns null for anything that
+// escapes it (../, encoded ../, absolute paths).
+export function safePath(site, urlPath) {
+  const root = resolve(site);
+  let decoded;
+  try { decoded = decodeURIComponent(String(urlPath).split('?')[0]); } catch { return null; }
+  if (decoded.includes('\0')) return null;
+  const rel = decoded.replace(/\/$/, '/index.html');
+  const p = resolve(root, '.' + (rel.startsWith('/') ? rel : '/' + rel));
+  if (!p.startsWith(root + sep) && p !== root) return null;
+  return p;
+}
+
+const isCli = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCli) await main();
+
+async function main() {
 const site = process.argv[2]; if (!site) { console.error('usage: shoot.mjs sitedir'); process.exit(2); }
 const shots = join(site, 'shots'); mkdirSync(shots, { recursive: true });
 
@@ -19,7 +37,8 @@ async function getPlaywright() {
 }
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.json': 'application/json' };
 const server = createServer((req, res) => {
-  const p = join(site, decodeURIComponent(req.url.split('?')[0]).replace(/\/$/, '/index.html'));
+  const p = safePath(site, req.url);
+  if (!p) { res.writeHead(403); return res.end(); }
   if (!existsSync(p) || statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { 'content-type': types[extname(p)] || 'application/octet-stream' }); res.end(readFileSync(p));
 });
@@ -36,11 +55,37 @@ async function run(viewport, prefix, reduced) {
   const page = await ctx.newPage();
   const bad = [];
   page.on('response', r => { if (r.status() >= 400) bad.push(r.url()); });
-  await page.goto(url, { waitUntil: 'load' });
+  // Evidence that the poster covers the hero before the frames take over. Sampled at
+  // 'commit', as soon as the poster element parses and before the engine script has
+  // executed, so a warm local cache cannot race the first draw ahead of the check.
+  if (prefix === 'desktop' && !reduced) {
+    await page.goto(url, { waitUntil: 'commit' });
+    await page.waitForSelector('.ss-poster', { state: 'attached', timeout: 10000 }).catch(() => {});
+    const posterUp = await page.evaluate(() => {
+      const p = document.querySelector('.ss-poster');
+      return !!p && getComputedStyle(p).opacity === '1' && !(window.__ss && window.__ss.drawn >= 0);
+    });
+    await page.screenshot({ path: join(shots, 'desktop-pre.png') });
+    note('poster before frames', posterUp);
+    await page.waitForLoadState('load');
+  } else {
+    await page.goto(url, { waitUntil: 'load' });
+  }
   await page.waitForFunction(() => window.__ss && window.__ss.ready, null, { timeout: 20000 }).catch(() => {});
   const ready = await page.evaluate(() => !!(window.__ss && window.__ss.ready));
   note(`${prefix} engine ready`, ready);
   const settle = async () => { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); await page.waitForTimeout(250); };
+  // Wait until the drawn frame index stops moving, instead of a fixed sleep.
+  const settleDrawn = async () => {
+    const t0 = Date.now();
+    let last = await page.evaluate(() => (window.__ss ? window.__ss.drawn : -1));
+    while (Date.now() - t0 < 1500) {
+      await page.waitForTimeout(100);
+      const now = await page.evaluate(() => (window.__ss ? window.__ss.drawn : -1));
+      if (now === last) return;
+      last = now;
+    }
+  };
 
   if (reduced) {
     await settle();
@@ -58,7 +103,7 @@ async function run(viewport, prefix, reduced) {
   for (const p of [0, 25, 50, 75, 100]) {
     const y = Math.round((heroH - vh) * (p / 100));
     await page.evaluate(y => { if (window.__ss.lenis) window.__ss.lenis.scrollTo(y, { immediate: true }); else window.scrollTo(0, y); }, y);
-    await page.waitForTimeout(600); await settle();
+    await settleDrawn(); await settle();
     await page.screenshot({ path: join(shots, `${prefix}-${p}.png`) });
     const s = await page.evaluate(() => {
       const c = document.querySelector('.ss-canvas'); if (!c) return { drawn: -1, allBg: true };
@@ -100,3 +145,4 @@ const md = `# VERIFY\n\n${results.map(r => '- ' + r).join('\n')}\n\nShots in sho
 writeFileSync(join(site, 'VERIFY.md'), md);
 console.log(md);
 process.exit(fails.length ? 1 : 0);
+}
