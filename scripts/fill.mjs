@@ -22,9 +22,22 @@ const todos = [];
 const need = (key, val) => { if (val === undefined || val === null || val === '') { todos.push(key); return `{{TODO ${key}}}`; } return String(val); };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// Only these schemes may reach an href. Anything else becomes '#' and a todo.
+const SAFE_SCHEMES = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+export function safeHref(h, report) {
+  const v = String(h == null ? '' : h).trim();
+  if (v === '') return '#';
+  if (v.startsWith('#')) return v;
+  const m = v.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+  if (!m) return v; // relative path, no scheme
+  if (SAFE_SCHEMES.has(m[1].toLowerCase() + ':')) return v;
+  if (report) report(v);
+  return '#';
+}
+const href = v => safeHref(v, bad => todos.push('href:' + bad));
 
 const items = (brief.items || []).map((it, i) =>
-  `<li class="item ss-reveal"><span class="num">${String(i + 1).padStart(2, '0')}</span><a href="${esc(it.href || '#')}"><h3>${esc(need(`items[${i}].title`, it.title))}</h3><p>${esc(need(`items[${i}].text`, it.text))}</p></a></li>`
+  `<li class="item ss-reveal"><span class="num">${String(i + 1).padStart(2, '0')}</span><a href="${esc(href(it.href))}"><h3>${esc(need(`items[${i}].title`, it.title))}</h3><p>${esc(need(`items[${i}].text`, it.text))}</p></a></li>`
 ).join('\n      ');
 if (!brief.items || !brief.items.length) todos.push('items');
 
@@ -44,7 +57,7 @@ const vars = {
   LG_W: manifest ? manifest.lg.w : 1600, SM_W: manifest ? manifest.sm.w : 850,
   POSTER_ALT: brief.posterAlt || `${brief.name || 'The subject'}, mid-motion`,
   CUE_HOOK: look.hero.cueHook, CUE_SUB: look.hero.cueSub, HOOK: need('hook', brief.hook), CONTEXT: need('context', brief.context),
-  ITEMS: items, PEAK_TEXT: need('peakText', brief.peakText), CTA_HREF: (brief.cta && brief.cta.href) || '#contact', CTA_LABEL: need('cta.label', brief.cta && brief.cta.label),
+  ITEMS: items, PEAK_TEXT: need('peakText', brief.peakText), CTA_HREF: href((brief.cta && brief.cta.href) || '#contact'), CTA_LABEL: need('cta.label', brief.cta && brief.cta.label),
   CONTACT: need('contact', brief.contact), YEAR: String(new Date().getFullYear()),
   ...d, ...(brief.labels || {}),
   BG: look.tokens.bg, FG: look.tokens.fg, MUTED: look.tokens.muted, ACCENT: brief.accent || look.tokens.accent, RULE: look.tokens.rule,

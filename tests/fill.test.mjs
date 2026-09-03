@@ -37,3 +37,29 @@ test('fill.mjs escapes special characters in top-level vars but not in styles.cs
   assert.doesNotMatch(css, /&amp;/);
   assert.match(css, /#[0-9A-Fa-f]{6}/);
 });
+
+test('fill.mjs rejects unsafe href schemes and writes brief.json', () => {
+  rmSync(tmp, { recursive: true, force: true }); mkdirSync(tmp, { recursive: true });
+  const brief = { look: 'studio-white', name: 'Volt', tagline: 'Sneakers', type: 'product', hook: 'Dark.', context: 'Porto.', peakText: 'By hand.', contact: 'hi@volt.run', items: [{ title: 'A', text: 'B', href: 'javascript:alert(2)' }], cta: { label: 'x', href: 'javascript:alert(1)' }, frames: 140 };
+  writeFileSync(`${tmp}/in.json`, JSON.stringify(brief));
+  const out = execFileSync('node', [`${root}scripts/fill.mjs`, `${tmp}/in.json`, `${tmp}/site`]).toString();
+  const html = readFileSync(`${tmp}/site/index.html`, 'utf8');
+  assert.doesNotMatch(html, /javascript:/);
+  assert.match(html, /class="cta" href="#"/);
+  assert.match(out, /todo: href/);
+  assert.ok(existsSync(`${tmp}/site/brief.json`));
+  assert.deepEqual(JSON.parse(readFileSync(`${tmp}/site/brief.json`, 'utf8')).look, 'studio-white');
+});
+
+test('fill.mjs keeps safe hrefs and stamps the source widths', () => {
+  rmSync(tmp, { recursive: true, force: true }); mkdirSync(tmp, { recursive: true });
+  const brief = { look: 'studio-white', name: 'Volt', tagline: 'Sneakers', type: 'product', hook: 'Dark.', context: 'Porto.', peakText: 'By hand.', contact: 'hi@volt.run', items: [{ title: 'A', text: 'B', href: 'https://volt.run/a' }, { title: 'C', text: 'D', href: 'mailto:hi@volt.run' }], cta: { label: 'x', href: '#contact' }, frames: 140 };
+  writeFileSync(`${tmp}/in.json`, JSON.stringify(brief));
+  const out = execFileSync('node', [`${root}scripts/fill.mjs`, `${tmp}/in.json`, `${tmp}/site`]).toString();
+  const html = readFileSync(`${tmp}/site/index.html`, 'utf8');
+  assert.match(html, /href="https:\/\/volt.run\/a"/);
+  assert.match(html, /href="mailto:hi@volt.run"/);
+  assert.match(html, /data-lg-w="1600"/);
+  assert.match(html, /data-sm-w="850"/);
+  assert.doesNotMatch(out, /todo: href/);
+});
