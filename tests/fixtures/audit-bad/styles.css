@@ -1,0 +1,4 @@
+:root { --ss-bg: #F4F1EA; --ss-fg: #B08D57; --ss-accent: #7C3AED; --ss-font-display: "Inter"; }
+h1 { font-family: Impact, sans-serif; color: #000; }
+.a { transition: all 0.3s ease-in; }
+.b { transform: scale(0); transition: width 0.2s linear; }
