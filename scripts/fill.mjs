@@ -22,6 +22,7 @@ const todos = [];
 const need = (key, val) => { if (val === undefined || val === null || val === '') { todos.push(key); return `{{TODO ${key}}}`; } return String(val); };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+
 const items = (brief.items || []).map((it, i) =>
   `<li class="item ss-reveal"><span class="num">${String(i + 1).padStart(2, '0')}</span><a href="${esc(it.href || '#')}"><h3>${esc(need(`items[${i}].title`, it.title))}</h3><p>${esc(need(`items[${i}].text`, it.text))}</p></a></li>`
 ).join('\n      ');
@@ -40,6 +41,7 @@ const vars = {
   NAME: need('name', brief.name), TAGLINE: need('tagline', brief.tagline), LOOK: look.id, MODE: look.mode,
   FONT_LINK: look.fonts.link, FRAMES: need('frames', brief.frames || (manifest && manifest.count)), PIN: brief.pin || '400vh',
   POSTER_W: manifest ? manifest.lg.w : 1600, POSTER_H: manifest ? manifest.lg.h : 900,
+  LG_W: manifest ? manifest.lg.w : 1600, SM_W: manifest ? manifest.sm.w : 850,
   POSTER_ALT: brief.posterAlt || `${brief.name || 'The subject'}, mid-motion`,
   CUE_HOOK: look.hero.cueHook, CUE_SUB: look.hero.cueSub, HOOK: need('hook', brief.hook), CONTEXT: need('context', brief.context),
   ITEMS: items, PEAK_TEXT: need('peakText', brief.peakText), CTA_HREF: (brief.cta && brief.cta.href) || '#contact', CTA_LABEL: need('cta.label', brief.cta && brief.cta.label),
