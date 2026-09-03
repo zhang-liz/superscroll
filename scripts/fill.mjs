@@ -20,7 +20,7 @@ if (!look) { console.error(`unknown look ${brief.look}. known: ${Object.keys(loo
 
 const todos = [];
 const need = (key, val) => { if (val === undefined || val === null || val === '') { todos.push(key); return `{{TODO ${key}}}`; } return String(val); };
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const items = (brief.items || []).map((it, i) =>
   `<li class="item ss-reveal"><span class="num">${String(i + 1).padStart(2, '0')}</span><a href="${esc(it.href || '#')}"><h3>${esc(need(`items[${i}].title`, it.title))}</h3><p>${esc(need(`items[${i}].text`, it.text))}</p></a></li>`
@@ -48,11 +48,12 @@ const vars = {
   BG: look.tokens.bg, FG: look.tokens.fg, MUTED: look.tokens.muted, ACCENT: brief.accent || look.tokens.accent, RULE: look.tokens.rule,
   FONT_DISPLAY: look.fonts.display, FONT_BODY: look.fonts.body, DISPLAY_WEIGHT: String(look.fonts.displayWeight),
 };
-const render = tpl => tpl.replace(/\{\{([A-Z_0-9]+)\}\}/g, (m, k) => (k in vars ? vars[k] : m));
+const htmlVars = Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, k === 'ITEMS' ? v : esc(v)]));
+const render = (tpl, v) => tpl.replace(/\{\{([A-Z_0-9]+)\}\}/g, (m, k) => (k in v ? v[k] : m));
 
 mkdirSync(site, { recursive: true });
-writeFileSync(join(site, 'index.html'), render(readFileSync(join(skill, 'templates', 'index.html'), 'utf8')));
-writeFileSync(join(site, 'styles.css'), render(readFileSync(join(skill, 'templates', 'styles.css'), 'utf8')));
+writeFileSync(join(site, 'index.html'), render(readFileSync(join(skill, 'templates', 'index.html'), 'utf8'), htmlVars));
+writeFileSync(join(site, 'styles.css'), render(readFileSync(join(skill, 'templates', 'styles.css'), 'utf8'), vars));
 for (const f of ['scrub.js', 'scrub-core.js', 'scrub.css']) copyFileSync(join(skill, 'engine', f), join(site, f));
 writeFileSync(join(site, 'BRIEF.json'), JSON.stringify({ ...brief, look: look.id, signature: brief.signature || look.signature }, null, 2));
 for (const t of todos) console.log('todo: ' + t);

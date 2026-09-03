@@ -24,3 +24,16 @@ test('fill.mjs builds a site from a brief and copies engine verbatim', () => {
   assert.equal(sha(`${tmp}/site/scrub.js`), sha(`${root}engine/scrub.js`));
   assert.ok(existsSync(`${tmp}/site/scrub-core.js`));
 });
+
+test('fill.mjs escapes special characters in top-level vars but not in styles.css tokens', () => {
+  rmSync(tmp, { recursive: true, force: true }); mkdirSync(tmp, { recursive: true });
+  const brief = { look: 'studio-white', name: 'Ann & "Bo" <Co>', tagline: 'a<b', type: 'product', hook: 'Built for the dark.', context: 'Made in small runs.', items: [{ title: 'Volt One', text: 'Reflective knit.', href: '#' }], cta: { label: 'Buy', href: '#' }, frames: 140, pin: '400vh', signature: 'spec labels pin to the shoe' };
+  writeFileSync(`${tmp}/brief.json`, JSON.stringify(brief));
+  execFileSync('node', [`${root}scripts/fill.mjs`, `${tmp}/brief.json`, `${tmp}/site`]);
+  const html = readFileSync(`${tmp}/site/index.html`, 'utf8');
+  assert.match(html, /Ann &amp; &quot;Bo&quot; &lt;Co&gt;/);
+  assert.doesNotMatch(html, /<Co>/);
+  const css = readFileSync(`${tmp}/site/styles.css`, 'utf8');
+  assert.doesNotMatch(css, /&amp;/);
+  assert.match(css, /#[0-9A-Fa-f]{6}/);
+});
