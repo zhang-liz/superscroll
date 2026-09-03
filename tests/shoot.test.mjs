@@ -20,3 +20,16 @@ test('shoot.mjs screenshots a filled site and passes canvas checks', { timeout: 
   assert.match(v, /404s: 0/);
   assert.match(v, /reduced motion: pass/);
 });
+
+test('shoot.mjs cleans up and reports on a crash instead of a hard failure', { timeout: 120000 }, () => {
+  const bad = `${root}tests/tmp/shoot-bad`;
+  rmSync(bad, { recursive: true, force: true }); mkdirSync(`${bad}/site`, { recursive: true });
+  writeFileSync(`${bad}/site/index.html`, '<!doctype html><html><body><p>no hero</p></body></html>');
+  let status = 0;
+  try { execFileSync('node', [`${root}scripts/shoot.mjs`, `${bad}/site`], { stdio: 'pipe' }); }
+  catch (e) { status = e.status; }
+  assert.equal(status, 1);
+  assert.ok(existsSync(`${bad}/site/VERIFY.md`));
+  const v = readFileSync(`${bad}/site/VERIFY.md`, 'utf8');
+  assert.match(v, /hero present: FAIL|crash:/);
+});

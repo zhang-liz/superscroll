@@ -50,7 +50,8 @@ async function run(viewport, prefix, reduced) {
     await ctx.close(); return;
   }
 
-  const heroH = await page.evaluate(() => document.querySelector('.ss-hero').getBoundingClientRect().height);
+  const heroH = await page.evaluate(() => document.querySelector('.ss-hero')?.getBoundingClientRect().height ?? 0);
+  if (heroH === 0) { note(`${prefix} hero present`, false); await ctx.close(); return; }
   const vh = viewport.height;
   const drawnAt = [];
   let blankFails = 0;
@@ -60,7 +61,8 @@ async function run(viewport, prefix, reduced) {
     await page.waitForTimeout(600); await settle();
     await page.screenshot({ path: join(shots, `${prefix}-${p}.png`) });
     const s = await page.evaluate(() => {
-      const c = document.querySelector('.ss-canvas'); const g = c.getContext('2d');
+      const c = document.querySelector('.ss-canvas'); if (!c) return { drawn: -1, allBg: true };
+      const g = c.getContext('2d');
       const bg = getComputedStyle(document.body).backgroundColor;
       const pts = [[0.2, 0.2], [0.5, 0.5], [0.8, 0.8], [0.8, 0.2], [0.2, 0.8]].map(([x, y]) => { const d = g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; });
       return { drawn: window.__ss.drawn, allBg: pts.every(v => v === bg) };
@@ -82,10 +84,17 @@ async function run(viewport, prefix, reduced) {
   await ctx.close();
 }
 
-await run({ width: 1440, height: 900 }, 'desktop', false);
-await run({ width: 390, height: 844 }, 'mobile', false);
-await run({ width: 1440, height: 900 }, 'desktop', true);
-await browser.close(); server.close();
+try {
+  await run({ width: 1440, height: 900 }, 'desktop', false);
+  await run({ width: 390, height: 844 }, 'mobile', false);
+  await run({ width: 1440, height: 900 }, 'desktop', true);
+} catch (e) {
+  results.push('crash: ' + (e && e.message ? e.message : String(e)));
+  fails.push('crash');
+} finally {
+  await browser.close().catch(() => {});
+  server.close();
+}
 
 const md = `# VERIFY\n\n${results.map(r => '- ' + r).join('\n')}\n\nShots in shots/. Result: ${fails.length ? 'FAIL ' + fails.join(', ') : 'PASS'}\n`;
 writeFileSync(join(site, 'VERIFY.md'), md);
