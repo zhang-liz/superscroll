@@ -6,6 +6,8 @@ in="${1:?usage: frames.sh clip.mp4 sitedir}"
 out="${2:?usage: frames.sh clip.mp4 sitedir}"
 target="${SS_FRAMES:-140}"
 command -v ffmpeg >/dev/null || { echo "hint: install ffmpeg (brew install ffmpeg)" >&2; exit 4; }
+command -v cwebp >/dev/null || { echo "hint: brew install webp" >&2; exit 4; }
+command -v python3 >/dev/null || { echo "hint: install python3" >&2; exit 4; }
 
 dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$in")
 fps=$(python3 -c 'import sys;d=float(sys.argv[1]);t=float(sys.argv[2]);print(round(max(1.0,min(30.0,t/d)),3))' "$dur" "$target")
@@ -17,11 +19,11 @@ ffmpeg -v error -y -i "$in" -vf "fps=$fps,scale=850:-2"  -c:v png "$out/.tmp/sm-
 
 for png in "$out/.tmp"/lg-*.png; do
   num=$(basename "$png" .png | sed 's/lg-//')
-  cwebp -q 80 "$png" -o "$out/frames/lg/frame-$num.webp" >/dev/null 2>&1
+  cwebp -q 80 "$png" -o "$out/frames/lg/frame-$num.webp" >/dev/null
 done
 for png in "$out/.tmp"/sm-*.png; do
   num=$(basename "$png" .png | sed 's/sm-//')
-  cwebp -q 80 "$png" -o "$out/frames/sm/frame-$num.webp" >/dev/null 2>&1
+  cwebp -q 80 "$png" -o "$out/frames/sm/frame-$num.webp" >/dev/null
 done
 rm -rf "$out/.tmp"
 

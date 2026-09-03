@@ -89,9 +89,11 @@ export function audit(site, opts = {}) {
 
   // a11y
   const tk = k => { const m = css.match(new RegExp(`--ss-${k}:\\s*(#[0-9a-fA-F]{3,6})`)); return m ? { hex: m[1], line: lineOf(css, m.index) } : null; };
-  const bg = tk('bg'), fg = tk('fg'), muted = tk('muted');
+  const bg = tk('bg'), fg = tk('fg'), muted = tk('muted'), accent = tk('accent');
   if (bg && fg && contrast(bg.hex, fg.hex) < 4.5) add('styles.css', fg.line, 'a11y-contrast', `fg on bg is ${contrast(bg.hex, fg.hex).toFixed(2)}:1, want 4.5`);
   if (bg && muted && contrast(bg.hex, muted.hex) < 4.5) add('styles.css', muted.line, 'a11y-contrast', `muted on bg is ${contrast(bg.hex, muted.hex).toFixed(2)}:1, want 4.5`);
+  // accent drives selection and the focus ring, so it needs 3:1 against the page
+  if (bg && accent && contrast(bg.hex, accent.hex) < 3) add('styles.css', accent.line, 'a11y-contrast', `accent on bg is ${contrast(bg.hex, accent.hex).toFixed(2)}:1, want 3`);
   if (!/prefers-reduced-motion/.test(css + read('scrub.css'))) add('styles.css', 1, 'a11y-reduced-motion', 'no reduced-motion rules');
 
   // engine hash
