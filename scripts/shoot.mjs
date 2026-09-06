@@ -119,6 +119,8 @@ async function run(viewport, prefix, reduced) {
     note('canvas non-blank', blankFails === 0, `(${5 - blankFails - 1}/4 positions)`);
     note('frame advances', drawnAt[4] > drawnAt[0] && drawnAt[2] > drawnAt[0], `(${drawnAt.join(' -> ')})`);
     for (const id of ['context', 'work', 'about', 'contact']) {
+      const present = await page.evaluate(id => !!document.getElementById(id), id);
+      if (!present) continue;
       await page.evaluate(id => { const el = document.getElementById(id); const y = el.getBoundingClientRect().top + window.scrollY - 40; if (window.__ss.lenis) window.__ss.lenis.scrollTo(y, { immediate: true }); else window.scrollTo(0, y); }, id);
       await page.waitForTimeout(500); await settle();
       await page.screenshot({ path: join(shots, `section-${id}.png`) });
